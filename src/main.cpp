@@ -101,11 +101,12 @@ static std::vector<Event> events;   // today and tomorrow, sorted by start
 static bool calendarOk = false;
 static long fakeOffset = 0;         // serial "t1430" pretends it is 14:30, for testing
 static unsigned long awakeUntil = 0;   // millis(); 0 = sleep as soon as the refresh is done
+static bool demoMode = false;          // no feed URL, or toggled over serial for this session
 
 // Kept in RTC memory through deep sleep, so a wake with no network still has
-// something to show. Cleared on power-on.
+// something to show. RTC memory also survives a reset or reflash (possibly with
+// a different layout), so clearRtcState() wipes it on anything but a sleep wake.
 RTC_DATA_ATTR static time_t eventsDay = 0;       // local midnight of the day events were fetched for
-RTC_DATA_ATTR static bool demoMode = false;
 RTC_DATA_ATTR static Weather weather;
 RTC_DATA_ATTR static time_t lastGoodFetch = 0;
 RTC_DATA_ATTR static time_t nextRefreshAt = 0;
@@ -118,6 +119,17 @@ struct CachedEvent {
 static const int CACHE_MAX = 24;
 RTC_DATA_ATTR static CachedEvent rtcEvents[CACHE_MAX] = {};
 RTC_DATA_ATTR static int rtcEventCount = 0;
+
+static void clearBins();
+
+static void clearRtcState() {
+    eventsDay = 0;
+    weather = Weather();
+    lastGoodFetch = 0;
+    nextRefreshAt = 0;
+    rtcEventCount = 0;
+    clearBins();
+}
 
 static void saveEventsToRtc() {
     rtcEventCount = min((int)events.size(), CACHE_MAX);
@@ -419,6 +431,8 @@ static int32_t binColour(const String &name) {
     if (name == "black") return INK_BLACK;
     return NOT_A_BIN;
 }
+
+static void clearBins() { binCount = 0; }
 
 static void addBin(int32_t colour) {
     if (colour == NOT_A_BIN || binCount >= 3) return;
@@ -1271,6 +1285,7 @@ void setup() {
     bool timerWake = cause == ESP_SLEEP_WAKEUP_TIMER;
     bool buttonWake = cause == ESP_SLEEP_WAKEUP_EXT1;
     if (timerWake || buttonWake) rtc_gpio_deinit(TOP_BUTTON_PIN);   // hand the pin back to normal GPIO
+    else clearRtcState();   // power-on, reset or reflash: RTC contents can't be trusted
 
     auto cfg = M5.config();
     cfg.clear_display = false;   // each clear is a 16 s refresh, and the old image should stay up while we work

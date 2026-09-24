@@ -1,0 +1,18 @@
+# PlatformIO build output and downloaded toolchains/libraries
+.pio/
+
+# Credentials - kept in .env, and the header generated from it; never committed
+.env
+include/secrets.h
+
+# Screenshots dumped from the device
+shots/
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
